@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>HaxBall Táctico ELITE</title>
+<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+<style>
+body{background:#020617;color:white;font-family:sans-serif;text-align:center}
+h1{margin:10px}
+.controls button, .controls input{
+  margin:5px;padding:8px 12px;border:none;border-radius:8px;
+  cursor:pointer;background:#22c55e;color:black;font-weight:bold
+}
+.field{
+  width:360px;height:560px;margin:20px auto;position:relative;
+  background:linear-gradient(#166534,#14532d);
+  border:3px solid white;border-radius:12px;overflow:hidden
+}
+.player{
+  width:44px;height:44px;border-radius:50%;position:absolute;
+  display:flex;align-items:center;justify-content:center;
+  font-weight:bold;cursor:grab;user-select:none;color:white
+}
+.teamA{outline:3px solid #3b82f6}
+.teamB{outline:3px solid #ef4444}
+.gk{background:#1d4ed8}
+.df{background:#ef4444}
+.mc{background:#22c55e}
+.fw{background:#f59e0b}
+.ball{width:20px;height:20px;border-radius:50%;background:white;position:absolute;cursor:grab}
+canvas{position:absolute;top:0;left:0}
+</style>
+</head>
+<body>
+
+<h1>HaxBall Editor ELITE</h1>
+
+<div class="controls">
+  <button onclick="loadFormation('x4')">x4</button>
+  <button onclick="loadFormation('x5')">x5</button>
+  <button onclick="loadFormation('x6')">x6</button>
+  <button onclick="loadFormation('x7')">x7</button>
+  <button onclick="saveFormation()">💾</button>
+  <button onclick="loadSaved()">📂</button>
+  <button onclick="exportImage()">📸</button>
+  <button onclick="toggleDraw()">✏️</button>
+  <button onclick="downloadJSON()">⬇️ JSON</button>
+  <button onclick="uploadJSON()">⬆️ JSON</button>
+</div>
+
+<input id="teamName" placeholder="Nombre equipo" />
+
+<div class="field" id="field">
+  <canvas id="draw" width="360" height="560"></canvas>
+</div>
+
+<script>
+const field=document.getElementById('field');
+let players=[];
+let drawing=false;
+
+function createPlayer(type,x,y,label,team='A'){
+  const p=document.createElement('div');
+  p.className=`player ${type} team${team}`;
+  p.innerText=label;
+  p.style.left=x+'px';
+  p.style.top=y+'px';
+
+  p.onclick=()=>{
+    if(p.classList.contains('df')){p.className=`player mc team${team}`;p.innerText='MC'}
+    else if(p.classList.contains('mc')){p.className=`player fw team${team}`;p.innerText='FW'}
+    else if(p.classList.contains('fw')){p.className=`player df team${team}`;p.innerText='DF'}
+  }
+
+  p.ondblclick=()=>{
+    const name=prompt('Nombre jugador:');
+    if(name)p.innerText=name;
+  }
+
+  dragElement(p);
+  field.appendChild(p);
+  players.push(p);
+}
+
+function createBall(){
+  const b=document.createElement('div');
+  b.className='ball';
+  b.style.left='170px';
+  b.style.top='260px';
+  dragElement(b);
+  field.appendChild(b);
+}
+
+function dragElement(el){
+  let offsetX,offsetY;
+  el.onmousedown=(e)=>{
+    offsetX=e.clientX-el.offsetLeft;
+    offsetY=e.clientY-el.offsetTop;
+    document.onmousemove=(e)=>{
+      el.style.left=(e.clientX-offsetX)+'px';
+      el.style.top=(e.clientY-offsetY)+'px';
+    }
+    document.onmouseup=()=>{document.onmousemove=null}
+  }
+}
+
+function clearField(){
+  field.innerHTML='<canvas id="draw" width="360" height="560"></canvas>';
+  players=[];
+}
+
+function loadFormation(type){
+  clearField();
+
+  if(type==='x4'){
+    createPlayer('gk',150,10,'GK');
+    createPlayer('mc',80,240,'MC');
+    createPlayer('mc',220,240,'MC');
+    createPlayer('fw',150,460,'FW');
+  }
+
+  if(type==='x5'){
+    createPlayer('gk',150,10,'GK');
+    createPlayer('df',80,140,'DF');
+    createPlayer('df',220,140,'DF');
+    createPlayer('mc',150,300,'MC');
+    createPlayer('fw',150,460,'FW');
+  }
+
+  if(type==='x6'){
+    createPlayer('gk',150,10,'GK');
+    createPlayer('df',80,140,'DF');
+    createPlayer('df',220,140,'DF');
+    createPlayer('mc',80,320,'MC');
+    createPlayer('mc',220,320,'MC');
+    createPlayer('fw',150,460,'FW');
+  }
+
+  if(type==='x7'){
+    createPlayer('gk',150,10,'GK');
+    createPlayer('df',40,140,'DF');
+    createPlayer('df',150,140,'DF');
+    createPlayer('df',260,140,'DF');
+    createPlayer('mc',80,320,'MC');
+    createPlayer('mc',220,320,'MC');
+    createPlayer('fw',150,460,'FW');
+  }
+
+  createBall();
+}
+
+function saveFormation(){
+  const data=players.map(p=>({x:p.style.left,y:p.style.top,role:p.innerText,class:p.className}));
+  localStorage.setItem('haxball_elite',JSON.stringify(data));
+}
+
+function loadSaved(){
+  clearField();
+  const data=JSON.parse(localStorage.getItem('haxball_elite')||'[]');
+  data.forEach(d=>{
+    const role=d.role;
+    const type=role.toLowerCase();
+    createPlayer(type,parseInt(d.x),parseInt(d.y),role);
+  });
+  createBall();
+}
+
+function downloadJSON(){
+  const data=localStorage.getItem('haxball_elite');
+  const blob=new Blob([data],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='tactica.json';
+  a.click();
+}
+
+function uploadJSON(){
+  const input=document.createElement('input');
+  input.type='file';
+  input.onchange=e=>{
+    const file=e.target.files[0];
+    const reader=new FileReader();
+    reader.onload=()=>{
+      localStorage.setItem('haxball_elite',reader.result);
+      loadSaved();
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+function exportImage(){
+  html2canvas(field).then(canvas=>{
+    const link=document.createElement('a');
+    link.download='tactica.png';
+    link.href=canvas.toDataURL();
+    link.click();
+  });
+}
+
+function toggleDraw(){drawing=!drawing}
+
+const canvas=document.getElementById('draw');
+const ctx=canvas.getContext('2d');
+
+canvas.addEventListener('mousedown',e=>{
+  if(!drawing)return;
+  ctx.beginPath();
+  ctx.moveTo(e.offsetX,e.offsetY);
+  canvas.onmousemove=e=>{
+    ctx.lineTo(e.offsetX,e.offsetY);
+    ctx.strokeStyle='white';
+    ctx.lineWidth=2;
+    ctx.stroke();
+  }
+});
+
+canvas.addEventListener('mouseup',()=>{canvas.onmousemove=null});
+
+loadFormation('x4');
+</script>
+
+</body>
+</html>
